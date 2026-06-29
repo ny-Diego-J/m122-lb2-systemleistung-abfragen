@@ -5,12 +5,18 @@
 ### Formatierte Inhalte
 
 [x] Die aktuelle Systemlaufzeit und aktuelle Systemzeit
+
 [x] Die Grösse des belegten und freien Speichers auf dem Dateisystem
+
 [x] Der Hostname imd IP-adresse des Systems
+
 [x] Die Betriebssystemname und -version
+
 [x] Der Modellname der CPU und die Anzahl der CPU-Cores
+
 [x] Der gesamte und der genutze Arbeitsspeicher
-[] Trenner und Abschluss der Tabelle für die nächste Ausgabe
+
+[x] Trenner und Abschluss der Tabelle für die nächste Ausgabe
 
 ### Dateiausgabe wahlweise (d.h. mit einem "switch" -f)
 
