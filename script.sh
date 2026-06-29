@@ -4,6 +4,7 @@ printInTerminal() {
     formatLine="----------------|--"
     formatLine+=$(printf '%0.s-' $(seq 1 "$size")) # formatline mit angepasster länge
     # "" ist zählt als letztes argument bei %-*s als nichts
+    # Printet alles ins terminal
     printf "|%s|\n" "$formatLine"
     printf "|%-15s | %s %-*s|\n" "Text" "Wert" "$((size - 4))" ""
     printf "|%s|\n" "$formatLine"
@@ -28,15 +29,12 @@ printInTerminal() {
 createWebsite() {
     htmlFile="./index.html"
 
-    # Optionale Berechnung der Prozentwerte für die Ampel-Logik
-    # Verhindert Division durch 0, falls Variablen leer sind
     if [ "$maxStorageGB" -gt 0 ]; then
         storagePercent=$((100 * usedStorage / maxStorageGB))
     else
         storagePercent=0
     fi
 
-    # Extrahiere reine Zahlen aus free -h für eine ungefähre Prozentberechnung
     ramMaxNum=$(echo "$maxRam" | sed 's/[A-Za-z]//g' | tr ',' '.')
     ramUsedNum=$(echo "$usedRam" | sed 's/[A-Za-z]//g' | tr ',' '.')
     # Einfache Ganzzahlberechnung für die Bash:
@@ -46,7 +44,6 @@ createWebsite() {
         ramPercent=0
     fi
 
-    # Ampel-Farbe für Storage bestimmen
     if [ "$storagePercent" -gt 90 ]; then
         storageClass="status-red"
     elif [ "$storagePercent" -gt 70 ]; then
@@ -55,7 +52,6 @@ createWebsite() {
         storageClass="status-green"
     fi
 
-    # Ampel-Farbe für RAM bestimmen
     if [ "$ramPercent" -gt 90 ]; then
         ramClass="status-red"
     elif [ "$ramPercent" -gt 70 ]; then
@@ -64,7 +60,6 @@ createWebsite() {
         ramClass="status-green"
     fi
 
-    # HTML-Inhalt schreiben via Here-Document
     cat <<EOF >"$htmlFile"
 <!DOCTYPE html>
 <html lang="de">
@@ -99,7 +94,7 @@ createWebsite() {
     <div class="container">
         <header>
             <div>
-                <h1>📊 System Dashboard</h1>
+                <h1>System Dashboard</h1>
                 <p style="color: #94a3b8;">Live-Statusberichte der Systemleistung</p>
             </div>
             <div class="meta-info">
@@ -163,11 +158,15 @@ createWebsite() {
 EOF
     echo "Dashboard erfolgreich exportiert nach: $htmlFile"
 }
+# print infos zu .log file
 printToFile() {
     jahr_monat=$(date "+%Y-%m")
+    # filename
     log_datei="${jahr_monat}-sys-${hostname}.log"
     formatLine="----------------|--"
+    # format line mit richtiger länge
     formatLine+=$(printf '%0.s-' $(seq 1 "$size"))
+    # schreibt text als neuer abschnit ins terminal
     {
         printf "|%s|\n" "$formatLine"
         printf "|%-15s | %s %-*s|\n" "Text" "Wert" "$((size - 4))" ""
@@ -189,10 +188,11 @@ printToFile() {
         printf "|%s|\n" "$formatLine"
     } >>"$log_datei"
 }
-
+# checkt für die max länge eines befehls für formatierung
 size=0
 
 runtime=$(uptime -p | sed 's/up //')
+# updated max länge
 if [ "${#runtime}" -gt "$size" ]; then
     size="${#runtime}"
 fi
@@ -200,33 +200,38 @@ time=$(date +"%H:%M:%S")
 if [ "${#time}" -gt "$size" ]; then
     size="${#time}"
 fi
-
+# holt storage infos in mb und convertet sie nacher zu gb
 totalStorageMB=$(df -m / | awk 'NR==2 {print $2}')
 availableStorageMB=$(df -m / | awk 'NR==2 {print $4}')
 usedStorageMB=$(df -m / | awk 'NR==2 {print $3}')
 
 maxStorageGB=$((totalStorageMB / 1024))
+# updated max länge
 if [ "${#maxStorageGB}" -gt "$size" ]; then
     size="${#maxStorageGB}"
 fi
 freeStorage=$((availableStorageMB / 1024))
+# updated max länge
 if [ "${#freeStorage}" -gt "$size" ]; then
     size="${#time}"
 fi
 usedStorage=$((usedStorageMB / 1024))
+# updated max länge
 if [ "${#usedStorage}" -gt "$size" ]; then
     size="${#usedStorage}"
 fi
 
 hostname=$(cat /etc/hostname)
+# updated max länge
 if [ "${#hostname}" -gt "$size" ]; then
     size="${#hostname}"
 fi
-
+# holt ip
 ip=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7}' | head -n1)
 # Ki für fallback fals ip nicht gefunden wurde
 [ -z "$ip" ] && ip=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk '{print $2}' | cut -d/ -f1 | head -n1)
 
+# updated max länge
 if [ "${#ip}" -gt "$size" ]; then
     size="${#ip}"
 fi
@@ -241,31 +246,37 @@ else
     osVersion="Unknown"
 fi
 
+# updated max länge
 if [ "${#osName}" -gt "$size" ]; then
     size="${#osName}"
 fi
 
+# updated max länge
 if [ "${#osVersion}" -gt "$size" ]; then
     size="${#osVersion}"
 fi
 
 # Ki für genaue extraction von name ohne leerzeichen
 cpuModelname=$(grep "model name" -m 1 /proc/cpuinfo | cut -d ":" -f2 | sed 's/^[ \t]*//')
+# updated max länge
 if [ "${#cpuModelname}" -gt "$size" ]; then
     size="${#cpuModelname}"
 fi
 
 cpuCores=$(nproc)
+# updated max länge
 if [ "${#cpuCores}" -gt "$size" ]; then
     size="${#cpuCores}"
 fi
 
 maxRam=$(free -h | awk 'NR==2 {print $2}')
+# updated max länge
 if [ "${#maxRam}" -gt "$size" ]; then
     size="${#maxRam}"
 fi
 
 usedRam=$(free -h | awk 'NR==2 {print $3}')
+# updated max länge
 if [ "${#usedRam}" -gt "$size" ]; then
     size="${#usedRam}"
 fi
@@ -276,6 +287,7 @@ case "$#" in
     createWebsite
     ;;
 1)
+    # bei einer -f flag wird es zur file printed anstadt ins terminal
     if [ "$1" = "-f" ]; then
         printToFile
     else
@@ -292,12 +304,14 @@ case "$#" in
 esac
 
 # in praxis auslagern in ~/.config/sysdata
+# macht ein mail wenn es eine mail.conf gibt
 if [ -f ./mail.conf ]; then
     # holt infos aus mail.conf
     source ./mail.conf
     maxValue=$maxDiskValue
     address=$mailAddress
 
+    # Aktuelle disk ussage
     currentDiskUssage=$(df -h / | awk 'NR==2 {print $5}' | cut -d% -f1)
 
     if [ "$currentDiskUssage" -gt "$maxValue" ]; then
@@ -307,6 +321,7 @@ if [ -f ./mail.conf ]; then
         # Komplet ai für Mailing
         GMAIL_USER="bash57003@gmail.com"
         GMAIL_APP_PASS="tecn sayh qvtw ouzc"
+        # macht eine mail. Benögtig swaks als package
         swaks --to "$address" \
             --from "$GMAIL_USER" \
             --server "smtp.gmail.com" \
