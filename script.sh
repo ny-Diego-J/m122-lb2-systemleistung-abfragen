@@ -24,6 +24,145 @@ printInTerminal() {
     printf "|%s|\n" "$formatLine"
 }
 
+# Ai für Webseite aufbau/styling
+createWebsite() {
+    htmlFile="./index.html"
+
+    # Optionale Berechnung der Prozentwerte für die Ampel-Logik
+    # Verhindert Division durch 0, falls Variablen leer sind
+    if [ "$maxStorageGB" -gt 0 ]; then
+        storagePercent=$((100 * usedStorage / maxStorageGB))
+    else
+        storagePercent=0
+    fi
+
+    # Extrahiere reine Zahlen aus free -h für eine ungefähre Prozentberechnung
+    ramMaxNum=$(echo "$maxRam" | sed 's/[A-Za-z]//g' | tr ',' '.')
+    ramUsedNum=$(echo "$usedRam" | sed 's/[A-Za-z]//g' | tr ',' '.')
+    # Einfache Ganzzahlberechnung für die Bash:
+    if [ -n "$ramMaxNum" ] && [ -n "$ramUsedNum" ]; then
+        ramPercent=$(awk "BEGIN {print int(($ramUsedNum / $ramMaxNum) * 100)}")
+    else
+        ramPercent=0
+    fi
+
+    # Ampel-Farbe für Storage bestimmen
+    if [ "$storagePercent" -gt 90 ]; then
+        storageClass="status-red"
+    elif [ "$storagePercent" -gt 70 ]; then
+        storageClass="status-yellow"
+    else
+        storageClass="status-green"
+    fi
+
+    # Ampel-Farbe für RAM bestimmen
+    if [ "$ramPercent" -gt 90 ]; then
+        ramClass="status-red"
+    elif [ "$ramPercent" -gt 70 ]; then
+        ramClass="status-yellow"
+    else
+        ramClass="status-green"
+    fi
+
+    # HTML-Inhalt schreiben via Here-Document
+    cat <<EOF >"$htmlFile"
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Systemleistung Dashboard - $hostname</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Inter, sans-serif; background-color: #0f172a; color: #e2e8f0; padding: 30px; line-height: 1.5; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 2px solid #1e293b; margin-bottom: 30px; }
+        h1 { color: #38bdf8; font-size: 28px; font-weight: 600; }
+        .meta-info { font-size: 14px; color: #94a3b8; text-align: right; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1-fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .card-title { font-size: 12px; uppercase; color: #64748b; font-weight: 700; margin-bottom: 5px; }
+        .card-value { font-size: 20px; font-weight: 600; color: #f1f5f9; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-top: 20px; }
+        th, td { padding: 14px 20px; text-align: left; }
+        th { background-color: #0f172a; color: #38bdf8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #334155; }
+        td { background-color: #1e293b; border-bottom: 1px solid #334155; font-size: 15px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: #24334d; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-align: center; min-width: 80px; }
+        .status-green { background-color: #065f46; color: #34d399; border: 1px solid #059669; }
+        .status-yellow { background-color: #78350f; color: #fbbf24; border: 1px solid #d97706; }
+        .status-red { background-color: #991b1b; color: #f87171; border: 1px solid #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>📊 System Dashboard</h1>
+                <p style="color: #94a3b8;">Live-Statusberichte der Systemleistung</p>
+            </div>
+            <div class="meta-info">
+                <div><strong>Hostname:</strong> $hostname</div>
+                <div><strong>IP-Adresse:</strong> $ip</div>
+            </div>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">OS & Version</div>
+                <div class="card-value">$osName</div>
+                <div style="font-size: 13px; color: #94a3b8;">$osVersion</div>
+            </div>
+            <div class="card">
+                <div class="card-title">System Uptime</div>
+                <div class="card-value">$runtime</div>
+                <div style="font-size: 13px; color: #94a3b8;">Generiert um: $time</div>
+            </div>
+            <div class="card">
+                <div class="card-title">CPU Kerne</div>
+                <div class="card-value">$cpuCores Cores</div>
+                <div style="font-size: 13px; color: #94a3b8; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;" title="$cpuModelname">$cpuModelname</div>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Metrik</th>
+                    <th style="width: 50%;">Details</th>
+                    <th style="width: 20%; text-align: center;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Arbeitsspeicher</strong></td>
+                    <td>Belegt: $usedRam / Gesamt: $maxRam ($ramPercent%)</td>
+                    <td style="text-align: center;"><span class="badge $ramClass">${ramPercent}%</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Gesamtspeicher (Disk)</strong></td>
+                    <td>Gesamtgröße: $maxStorageGB GB</td>
+                    <td style="text-align: center;"><span class="badge status-green">OK</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Freier Speicher</strong></td>
+                    <td>Verfügbar: $freeStorage GB</td>
+                    <td style="text-align: center;"><span class="badge status-green">OK</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Belegter Speicher</strong></td>
+                    <td>Auslastung: $usedStorage GB ($storagePercent%)</td>
+                    <td style="text-align: center;"><span class="badge $storageClass">${storagePercent}%</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
+EOF
+    echo "Dashboard erfolgreich exportiert nach: $htmlFile"
+}
 printToFile() {
     jahr_monat=$(date "+%Y-%m")
     log_datei="${jahr_monat}-sys-${hostname}.log"
@@ -131,16 +270,14 @@ if [ "${#usedRam}" -gt "$size" ]; then
     size="${#usedRam}"
 fi
 
-f1=""
-
 case "$#" in
 0)
     printInTerminal
+    createWebsite
     ;;
 1)
     if [ "$1" = "-f" ]; then
         printToFile
-        f1="-f"
     else
         echo "Invalid flag: $1"
         echo "Usage: $0 [-f]"
@@ -156,6 +293,7 @@ esac
 
 # in praxis auslagern in ~/.config/sysdata
 if [ -f ./mail.conf ]; then
+    # holt infos aus mail.conf
     source ./mail.conf
     maxValue=$maxDiskValue
     address=$mailAddress
@@ -169,8 +307,6 @@ if [ -f ./mail.conf ]; then
         # Komplet ai für Mailing
         GMAIL_USER="bash57003@gmail.com"
         GMAIL_APP_PASS="tecn sayh qvtw ouzc"
-        echo "true"
-
         swaks --to "$address" \
             --from "$GMAIL_USER" \
             --server "smtp.gmail.com" \
@@ -180,8 +316,6 @@ if [ -f ./mail.conf ]; then
             --auth-user "$GMAIL_USER" \
             --auth-password "$GMAIL_APP_PASS" \
             --header "$betreff" \
-            --body "$inhalt"
-
+            --body "$inhalt" >/dev/null 2>&1
     fi
-    echo "false"
 fi
