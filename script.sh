@@ -131,6 +131,8 @@ if [ "${#usedRam}" -gt "$size" ]; then
     size="${#usedRam}"
 fi
 
+f1=""
+
 case "$#" in
 0)
     printInTerminal
@@ -138,6 +140,7 @@ case "$#" in
 1)
     if [ "$1" = "-f" ]; then
         printToFile
+        f1="-f"
     else
         echo "Invalid flag: $1"
         echo "Usage: $0 [-f]"
@@ -150,3 +153,35 @@ case "$#" in
     exit 1
     ;;
 esac
+
+# in praxis auslagern in ~/.config/sysdata
+if [ -f ./mail.conf ]; then
+    source ./mail.conf
+    maxValue=$maxDiskValue
+    address=$mailAddress
+
+    currentDiskUssage=$(df -h / | awk 'NR==2 {print $5}' | cut -d% -f1)
+
+    if [ "$currentDiskUssage" -gt "$maxValue" ]; then
+        betreff="WARNING: Crittical disk ussage: ($currentDiskUssage%)"
+        inhalt="The disk as exceedet the threshould value of ($maxValue%) and is at ($currentDiskUssage%)"
+
+        # Komplet ai für Mailing
+        GMAIL_USER="bash57003@gmail.com"
+        GMAIL_APP_PASS="tecn sayh qvtw ouzc"
+        echo "true"
+
+        swaks --to "$address" \
+            --from "$GMAIL_USER" \
+            --server "smtp.gmail.com" \
+            --port 587 \
+            --tls \
+            --auth LOGIN \
+            --auth-user "$GMAIL_USER" \
+            --auth-password "$GMAIL_APP_PASS" \
+            --header "$betreff" \
+            --body "$inhalt"
+
+    fi
+    echo "false"
+fi
