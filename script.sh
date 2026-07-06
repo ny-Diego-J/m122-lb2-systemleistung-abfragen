@@ -25,6 +25,21 @@ printInTerminal() {
     printf "|%s|\n" "$formatLine"
 }
 
+log_message() {
+    local level="$1"
+    local message="$2"
+
+    # Datei-Name wie von dir definiert
+    local jahr_monat=$(date "+%Y-%m")
+    local log_datei="${jahr_monat}-sys-${hostname}.log"
+
+    # Aktueller Zeitstempel (z.B. 2026-07-06 09:15:00)
+    local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+
+    # Schreibt im Format: [ZEITSTEMPEL] [LEVEL] Nachricht
+    printf "[%s] [%s] %s\n" "$timestamp" "$level" "$message" >>"$log_datei"
+}
+
 # Ai für Webseite aufbau/styling
 createWebsite() {
     htmlFile="./index.html"
@@ -162,7 +177,7 @@ EOF
 printToFile() {
     jahr_monat=$(date "+%Y-%m")
     # filename
-    log_datei="${jahr_monat}-sys-${hostname}.log"
+    log_datei="${jahr_monat}-sys-${hostname}.txt"
     formatLine="----------------|--"
     # format line mit richtiger länge
     formatLine+=$(printf '%0.s-' $(seq 1 "$size"))
@@ -286,22 +301,43 @@ fi
 
 case "$#" in
 0)
+    log_message "INFO" "Started script execution in terminal"
+
     printInTerminal
+    if [ $? -eq 0 ]; then
+        log_message "INFO" "Sucessfully printed to temrinal"
+    else
+        log_message "ERROR" "Error while printing to terminal"
+    fi
+
     createWebsite
+    if [ $? -eq 0 ]; then
+        log_message "INFO" "Sucessfully createt html website under '$htmlFile'"
+    else
+        log_message "ERROR" "Could not create website"
+    fi
     ;;
 1)
-    # bei einer -f flag wird es zur file printed anstadt ins terminal
     if [ "$1" = "-f" ]; then
+        log_message "INFO" "Starting script exection to file"
+
         printToFile
+        if [ $? -eq 0 ]; then
+            log_message "INFO" "Sucessfully wrote to file"
+        else
+            log_message "ERROR" "Could not write to file"
+        fi
     else
         echo "Invalid flag: $1"
         echo "Usage: $0 [-f]"
+        log_message "ERROR" "Could not prase flas '$1'. Exiting script"
         exit 1
     fi
     ;;
 *)
     echo "Too many arguments."
     echo "Usage: $0 [-f]"
+    log_message "ERROR" "Too many arguments. Exiting"
     exit 1
     ;;
 esac
@@ -309,22 +345,20 @@ esac
 # in praxis auslagern in ~/.config/sysdata
 # macht ein mail wenn es eine mail.conf gibt
 if [ -f ./mail.conf ]; then
-    # holt infos aus mail.conf
     source ./mail.conf
     maxValue=$maxDiskValue
     address=$mailAddress
 
-    # Aktuelle disk ussage
     currentDiskUssage=$(df -h / | awk 'NR==2 {print $5}' | cut -d% -f1)
 
     if [ "$currentDiskUssage" -gt "$maxValue" ]; then
         betreff="WARNING: Crittical disk ussage: ($currentDiskUssage%)"
         inhalt="The disk as exceedet the threshould value of ($maxValue%) and is at ($currentDiskUssage%)"
 
-        # Komplet ai für Mailing
-        GMAIL_USER="bash57003@gmail.com"
-        GMAIL_APP_PASS="tecn sayh qvtw ouzc"
-        # macht eine mail. Benögtig swaks als package
+        # 1. Wir loggen die Warnung, dass der Speicher voll ist
+        log_message "WARNING" "Storagelimit exceedet currently: ${currentDiskUssage}% (limit: ${maxValue}%)"
+
+        # Mail senden
         swaks --to "$address" \
             --from "$GMAIL_USER" \
             --server "smtp.gmail.com" \
@@ -335,5 +369,15 @@ if [ -f ./mail.conf ]; then
             --auth-password "$GMAIL_APP_PASS" \
             --header "$betreff" \
             --body "$inhalt" >/dev/null 2>&1
+
+        # 2. Prüfen, ob swaks die Mail erfolgreich absetzen konnte
+        if [ $? -eq 0 ]; then
+            log_message "INFO" "Mail send Sucessfully"
+        else
+            log_message "ERROR" "Mail could not get send"
+        fi
+    else
+        # Optional: Loggen, dass der Speicherplatz okay ist
+        log_message "INFO" "Storage limit not exceedet"
     fi
 fi
