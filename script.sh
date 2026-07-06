@@ -167,6 +167,7 @@ printToFile() {
     # format line mit richtiger länge
     formatLine+=$(printf '%0.s-' $(seq 1 "$size"))
     # schreibt text als neuer abschnit ins terminal
+    # TODO: maybe add timestamp
     {
         printf "|%s|\n" "$formatLine"
         printf "|%-15s | %s %-*s|\n" "Text" "Wert" "$((size - 4))" ""
@@ -269,14 +270,16 @@ if [ "${#cpuCores}" -gt "$size" ]; then
     size="${#cpuCores}"
 fi
 
-maxRam=$(free -h | awk 'NR==2 {print $2}')
-# updated max länge
+maxRamMB=$(free -m | awk 'NR==2 {print $2}')
+usedRamMB=$(free -m | awk 'NR==2 {print $3}')
+
+# Konvertierung in GB als Fließkommazahl mit 1 Nachkommastelle via awk
+maxRam=$(awk "BEGIN {printf \"%.1f GiB\", $maxRamMB / 1024}")
+usedRam=$(awk "BEGIN {printf \"%.1f GiB\", $usedRamMB / 1024}")
+
 if [ "${#maxRam}" -gt "$size" ]; then
     size="${#maxRam}"
 fi
-
-usedRam=$(free -h | awk 'NR==2 {print $3}')
-# updated max länge
 if [ "${#usedRam}" -gt "$size" ]; then
     size="${#usedRam}"
 fi
